@@ -1,9 +1,11 @@
 
 '''
 UK Cyber Security BBC article challenge
-http://www.bbc.co.uk/news/technology-34312697
+Questions: http://www.bbc.co.uk/news/technology-34312697
+Answers: http://www.bbc.co.uk/news/technology-35929741
 
-2016-Mar-25
+First Created: 2016-Mar-25
+Last Update: 2016-Apr-04
 Python 2.7
 Chris
 '''
@@ -150,6 +152,7 @@ def question_five():
     with open(csv_file, 'rb') as f:
         reader = csv.reader(f)
         for row in reader:
+            # create a dictionary in the format {element no: element letters}
             my_elements[row[0]] = row[1]
 
     my_string = [81, 1, 68, 59, 68, 86, 53, 76, 105, 53, 24, 22, 89, 5, 57, 68, 77, 50, 89, 81, 85, 4, 113, 71, 95, 86, 47, 44, 45, 33, 11,\
@@ -160,15 +163,17 @@ def question_five():
         68, 44, 83, 39, 92, 62, 77, 28, 31, 52, 67, 63, 53, 28, 77, 43, 53, 13, 3, 3, 68, 65, 43, 63, 45, 34, 8, 26, 73, 67, 63, 68, 3, 63, 42, 68,\
          60, 65, 21, 4, 92, 73, 52, 74, 8, 57, 68, 65, 43, 63, 44, 38, 20, 13, 10, 52, 5, 63, 92, 50, 68, 66, 74, 67, 13, 81, 33, 75, 68, 81, 80, 63, 70]
 
+    # simply convert the given string into letters using the periodic table (only take the first letter if element has more than one)
     my_answer = ''
     for item in my_string:
         my_answer += my_elements[str(item)][0]
 
+    # create a set of letters used above
     my_letters = set([])
-
     for k, v in my_elements.iteritems():
         my_letters.update(v[0])
 
+    # find the letters in the alphabet not used above
     missing_letters = []
     my_letter_nums = [ord(item) for item in my_letters]
     for idx in range(65, 91):
@@ -204,8 +209,46 @@ def question_six_part_one():
 def question_six_part_two():
     '''
     See part_one
+
+    From BBC answer page:
+
+    Puzzle two was a bit of a beast. The key, literally, was using the five numbers arranged around the pentagon in the picture.
+    Starting at 3 and going clockwise gives the five character string 38108.
+    Repeating this 29 times gives a string 145-characters long, the same length as the one below the pentagon.
+    Getting intelligible text out of this first requires using both strings and then performing what is known as an "exclusive or" (XOR) operation on them.
+    Xor calculator - https://xor.pw/
+    Performing this operation produces another 145-character string that can be converted into English by looking up the numbers on a table of Ascii characters.
+    Use the decimal column.
+    The sneaky part was realising that in some cases two numbers represented a character and in others it was three. Not easy.
+    Anyone who went through these steps would reveal the following text: 'It's a poor sort of memory that only works backwards.'
     '''
-    return None
+
+    # go around the pentagon until we have the exact length as the given answer string below the pentagon
+    char_string = '38108' * 29
+    given_answer_string = '1528262114512379959787446361667336365541049710185448490827733939750117578606349583824805994668155766548948086204569455380471171904239315967452691'
+
+    assert len(char_string) == len(given_answer_string)
+
+    # using the xor calculator above
+    xor_string = '3973116391153297321121111111143211511111411632111102321091011091111141213211610497116321111101081213211911111410711532989799107119971141001154639'
+    assert len(xor_string) == len(given_answer_string)
+
+    # convert xor string to ascii characters.
+    count = 0
+    ans_string = ''
+    while count < (len(xor_string) - 1):
+        # if it does not start with a 1, then we take the 2 digit code
+        if xor_string[count] != '1':
+            two_num_int = int(xor_string[count] + xor_string[count + 1])
+            ans_string += chr(two_num_int)
+            count += 2
+        # else it is a three digit code
+        else:
+            three_num_int = int(xor_string[count] + xor_string[count + 1] + xor_string[count + 2])
+            ans_string += chr(three_num_int)
+            count += 3
+
+    return ans_string
 
 def question_six_part_three():
     '''
