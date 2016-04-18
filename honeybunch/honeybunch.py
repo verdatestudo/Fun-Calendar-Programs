@@ -92,13 +92,7 @@ class HoneyBunch(object):
         '''
         Get all neighbors of a tile.
         '''
-        neighbors = []
-        for direction in DIRECTIONS.itervalues():
-            possible_neighbor = tuple(map(sum, zip(tile, direction)))
-            if possible_neighbor in self._tile_value:
-                neighbors.append(possible_neighbor)
-
-        return neighbors
+        return [tuple(map(sum, zip(tile, direction))) for direction in DIRECTIONS.itervalues() if tuple(map(sum, zip(tile, direction))) in self._tile_value]
 
     def make_neighbors_zero(self, tile):
         '''
