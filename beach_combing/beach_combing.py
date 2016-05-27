@@ -9,7 +9,7 @@ See beach_combing_puzzle.png
 '''
 
 import cv2
-import detect_color_bc as dcbc
+import detect_color_and_shape_bc as dcbc
 
 GRID_SIZE = 9
 DIRECTIONS = {(-1, 0): 'up', (1, 0): 'down', (0, -1): 'left', (0, 1): 'right'}
@@ -32,7 +32,7 @@ GRAPH = [[[0, 0], [1, 0], [1, 1], [2, 1], [2, 2], [0, 2], [1, 0], [1, 1], [1, 2]
 ###
 ###
 
-NEW_GRAPH = dcbc.detect_color() # returns 2d grid in format ['blue', 'shell']
+NEW_GRAPH = dcbc.detect_color_and_shape('bc_myedit.jpg') # returns 2d grid in format ['blue', 'shell']
 
 def test_ml_vs_manual_graph(ml_graph, man_graph):
     '''

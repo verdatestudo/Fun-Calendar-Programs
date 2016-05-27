@@ -1,27 +1,44 @@
+'''
+Detect Color and Shape BC
+Helper for Beach Combing - Calendar Problem Solver
+Detects color and shape of tiles in puzzle
 
-import imutils
-import cv2
-import numpy as np
+First Created: 2016-May-26
+Last Updated: 2016-May-28
+Python 2.7
+Chris
 
+See beach_combing_puzzle.png
+'''
+
+from PIL import ImageEnhance
 from scipy.spatial import distance as dist
 from collections import OrderedDict
+import imutils
 import numpy as np
 import cv2
 
+from skimage import data, img_as_float
+from skimage import exposure
+from skimage import io
+
 class ColorLabeler:
+    '''
+    Takes a shape/contourgroup in an image and returns the nearest color (Euclidean distance).
+    '''
     def __init__(self):
         # init the colors dict, containing the color name and RGB value
         colors = OrderedDict({'red': (255, 0, 0), 'green': (0, 255, 0), 'blue': (0, 0, 255)})
 
         # allocate memory for the L*a*b* image, then init the color names list
         self.lab = np.zeros((len(colors), 1, 3), dtype='uint8')
-        self.colorNames = []
+        self.color_names = []
 
         # loop over the colors dict
         for (i, (name, rgb)) in enumerate(colors.items()):
             # update the L*a*b* array and the color names list
             self.lab[i] = rgb
-            self.colorNames.append(name)
+            self.color_names.append(name)
 
         # convert the L*a*b* array from the RGB color space to L*a*b*
         self.lab = cv2.cvtColor(self.lab, cv2.COLOR_RGB2LAB)
@@ -50,9 +67,12 @@ class ColorLabeler:
                 minDist = (d, i)
 
         # return the name of the color with the smallest distance
-        return self.colorNames[minDist[1]]
+        return self.color_names[minDist[1]]
 
 class ShapeDetector:
+    '''
+    Takes a shape/contourgroup and returns the nearest shape based on rules set in this class.
+    '''
     def __init__(self):
         pass
 
@@ -63,39 +83,82 @@ class ShapeDetector:
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
 
-        # if the shape is a triangle, it will have 3 vertices
         if len(approx) <= 6:
             shape = 'shell'
-
-        # if the shape has 4, it is a square or rectangle
         elif len(approx) >= 10:
             shape = 'star'
-
-        # else assume it's a circle
         else:
             shape = 'circle'
 
         return shape
 
-def detect_color():
+def image_equalization(image_file):
+    '''
+    in testing
+    '''
+    # Load an example image
+    img = io.imread(image_file)
+    #img = data.moon()
+    #img = 'new.jpg'
+
+    # Contrast stretching
+    p2, p98 = np.percentile(img, (2, 98))
+    img_rescale = exposure.rescale_intensity(img, in_range=(p2, p98))
+
+    img_rescale = exposure.adjust_sigmoid(img_rescale, 0.5, 5)
+
+    # Equalization
+    img_eq = exposure.equalize_hist(img)
+
+    # Adaptive Equalization
+    img_adapteq = exposure.equalize_adapthist(img, clip_limit=0.03)
+
+    '''
+    cv2.imshow('image', img)
+    cv2.waitKey(0)
+    '''
+
+    cv2.imshow('image', img_rescale)
+    cv2.waitKey(0)
+
+    '''
+    cv2.imshow('image', img_eq)
+    cv2.waitKey(0)
+    cv2.imshow('image', img_adapteq)
+    cv2.waitKey(0)
+    '''
+
+    cv2.imwrite('new_adj.jpg', img_rescale)
+    '''
+    cv2.imwrite('new_adj2.jpg', img_eq)
+    cv2.imwrite('new_adj3.jpg', img_adapteq)
+    '''
+
+    return ['new_adj.jpg', 1, 2] #'new_adj2.jpg', 'new_adj3.jpg']
+
+
+def detect_color_and_shape(image_file):
+    '''
+    Finds the shape and color of each tile in the puzzle.
+    Returns these values in a 2d list.
+    '''
 
     new_graph = [[[] for _ in range(9)] for _ in range(9)]
-    # load the image and resize it to a smaller factor
-    # so that the shapes can be approximated better
 
-    my_image = 'bc_myedit.jpg'
-    #my_image = 'untitled.png'
-
-    image = cv2.imread(my_image)
+    #my_image = 'bc_myedit.jpg'
+    image = cv2.imread(image_file)
 
     # blur the resized image slightly, then convert it to both
-    # graysale and the L*a*b* color spaces
+    # graysale and the L*a*b* color space
 
     blurred = cv2.GaussianBlur(image, (5, 5), 0)
     gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
     lab = cv2.cvtColor(blurred, cv2.COLOR_BGR2LAB)
     thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)[1]
     binary = cv2.bitwise_not(thresh)
+
+    cv2.imshow('image', binary)
+    cv2.waitKey(0)
 
     # find contours in the thresholded image
     cnts = cv2.findContours(binary.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -109,8 +172,7 @@ def detect_color():
     large_cnts = [cnt for cnt in cnts if cv2.contourArea(cnt) > min_cnt_area]
 
     # draw contours
-    cv2.drawContours(image_copy, large_cnts, -1, (255,0,0))
-
+    cv2.drawContours(image_copy, large_cnts, -1, (255, 0, 0))
 
     # init
     sd = ShapeDetector()
@@ -135,25 +197,27 @@ def detect_color():
         shape = sd.detect(c)
         color = cl.label(lab, c)
 
-        # multiply the contour (x, y) coords by the resize ratio,
-        # then draw the contours and the name of the shape and labeled
+        # draw the contours and the name of the shape and labeled
         # color on the image
 
         c = c.astype('float')
         c = c.astype('int')
-        text = '{} {}'.format(color, shape)
+        txt_color = color
+        txt_shape = shape
+        #text = '{} {}'.format(color, shape)
         cv2.drawContours(image, [c], -1, (0, 0, 0), 2)
-        cv2.putText(image, text, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 2)
+        cv2.putText(image, txt_color, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        cv2.putText(image, txt_shape, (cX, cY - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
         y_graph = int(round(cX / 80))
         x_graph = int(round(cY / 80))
         new_graph[x_graph][y_graph] = [color, shape]
 
-        # show image
+    # show image
 
-        #cv2.imshow('image', image)
-        #cv2.waitKey(0)
+    cv2.imshow('image', image)
+    cv2.waitKey(0)
 
     return new_graph
 
-#detect_color()
+#detect_color_and_shape('bc_myedit.jpg')
